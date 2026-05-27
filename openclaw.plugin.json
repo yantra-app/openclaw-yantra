@@ -1,0 +1,6 @@
+{
+  "id": "yantrarouter",
+  "name": "YantraRouter",
+  "version": "1.0.0",
+  "entry": "dist/index.js"
+}
