@@ -1,0 +1,36 @@
+{
+  "id": "yantrarouter",
+  "name": "YantraRouter",
+  "description": "Yantra AI Model Router",
+  "version": "1.0.0",
+  "entry": "dist/index.js",
+  "providers": ["yantrarouter"],
+  "modelSupport": {
+    "modelPrefixes": ["yantra/"]
+  },
+  "setup": {
+    "providers": [
+      {
+        "id": "yantrarouter",
+        "envVars": ["YANTRA_API_KEY"]
+      }
+    ]
+  },
+  "providerAuthChoices": [
+    {
+      "provider": "yantrarouter",
+      "method": "api-key",
+      "choiceId": "yantrarouter-api-key",
+      "choiceLabel": "Yantra API Key",
+      "groupId": "yantrarouter",
+      "groupLabel": "Yantra Router",
+      "cliFlag": "--yantra-api-key",
+      "cliOption": "--yantra-api-key <key>",
+      "cliDescription": "Yantra API key"
+    }
+  ],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false
+  }
+}
