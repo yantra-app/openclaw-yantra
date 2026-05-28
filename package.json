@@ -1,6 +1,6 @@
 {
   "name": "@yantra/openclaw-yantrarouter",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "AI SDK v6 provider for Yantra AI Model Router. Proxies generateText / streamText calls to the Yantra API.",
   "type": "module",
   "sideEffects": false,
@@ -15,12 +15,6 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": [
-    "dist/**/*",
-    "openclaw.plugin.json",
-    "README.md",
-    "LICENSE"
-  ],
   "scripts": {
     "build": "tsup",
     "clean": "rm -rf dist",
