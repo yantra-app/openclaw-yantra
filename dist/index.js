@@ -1,3 +1,6 @@
+// src/index.ts
+import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
+
 // src/provider.ts
 import { NoSuchModelError } from "@ai-sdk/provider";
 
@@ -395,42 +398,62 @@ var yantra = new Proxy(
 );
 
 // src/index.ts
-var plugin = {
+var BASE_URL = "http://127.0.0.1:18790/v1";
+var index_default = definePluginEntry({
   id: "yantrarouter",
   name: "YantraRouter",
   description: "Yantra AI Model Router",
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   register(api) {
     api.registerProvider({
       id: "yantrarouter",
-      name: "YantraRouter",
-      api: "openai-completions",
-      baseUrl: "https://cdecli-agent.cdebase.dev",
-      envKey: "YANTRA_API_KEY",
-      defaultModel: "yantra/gpt-4.1",
-      models: [
+      label: "Yantra Router",
+      envVars: ["YANTRA_API_KEY"],
+      auth: [
         {
-          id: "yantra/gpt-4.1",
-          name: "GPT 4.1",
-          contextWindow: 128e3,
-          maxTokens: 8192
-        },
-        {
-          id: "yantra/claude-sonnet-4",
-          name: "Claude Sonnet 4",
-          contextWindow: 2e5,
-          maxTokens: 8192
-        },
-        {
-          id: "yantra/deepseek-r1",
-          name: "DeepSeek R1",
-          contextWindow: 128e3,
-          maxTokens: 8192
+          id: "api-key",
+          methodId: "api-key",
+          label: "Yantra API key",
+          hint: "Bearer token from your Yantra / cdebase dashboard",
+          optionKey: "yantraApiKey",
+          flagName: "--yantra-api-key",
+          envVar: "YANTRA_API_KEY",
+          promptMessage: "Enter your Yantra API key",
+          defaultModel: "yantrarouter/yantra"
         }
-      ]
+      ],
+      // Accept any model string — cdecli agent handles routing internally
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      resolveDynamicModel: (ctx) => ({
+        id: ctx.modelId,
+        name: ctx.modelId,
+        provider: "yantrarouter",
+        api: "openai-completions",
+        baseUrl: BASE_URL,
+        reasoning: false,
+        input: ["text"],
+        contextWindow: 128e3,
+        maxTokens: 8192,
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      }),
+      // Normalize array content → string (cdecli-agent only accepts string content)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      wrapStreamFn: (ctx) => {
+        const inner = ctx?.streamFn;
+        if (!inner) return void 0;
+        return (params) => {
+          if (params && Array.isArray(params.messages)) {
+            params.messages = params.messages.map((m) => ({
+              ...m,
+              content: Array.isArray(m.content) ? m.content.map((p) => typeof p === "string" ? p : p?.text ?? "").join("") : m.content
+            }));
+          }
+          return inner(params);
+        };
+      }
     });
   }
-};
-var index_default = plugin;
+});
 export {
   YantraHttpClient,
   YantraLanguageModel,

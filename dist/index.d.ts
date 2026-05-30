@@ -1,4 +1,3 @@
-import { OpenClawPluginDefinition } from 'openclaw/plugin-sdk/plugin-entry';
 import { LanguageModelV3, LanguageModelV3CallOptions, LanguageModelV3Content, LanguageModelV3FinishReason, LanguageModelV3Usage, SharedV3Warning, SharedV3ProviderMetadata, LanguageModelV3StreamPart } from '@ai-sdk/provider';
 
 interface YantraHttpClientOptions {
@@ -208,6 +207,6 @@ interface YantraEnvConfig {
 }
 declare function loadYantraEnvConfig(env?: NodeJS.ProcessEnv): YantraEnvConfig;
 
-declare const plugin: OpenClawPluginDefinition;
+declare const _default: any;
 
-export { type ChatRequest, type ChatResponse, type CreateSessionInput, type SessionInfo, type YantraEnvConfig, YantraHttpClient, type YantraHttpClientOptions, YantraLanguageModel, type YantraLanguageModelOptions, type YantraModelSettings, type YantraProvider, type YantraProviderSettings, type YantraStreamEvent, createYantra, plugin as default, loadYantraEnvConfig, parseSseFrame, yantra };
+export { type ChatRequest, type ChatResponse, type CreateSessionInput, type SessionInfo, type YantraEnvConfig, YantraHttpClient, type YantraHttpClientOptions, YantraLanguageModel, type YantraLanguageModelOptions, type YantraModelSettings, type YantraProvider, type YantraProviderSettings, type YantraStreamEvent, createYantra, _default as default, loadYantraEnvConfig, parseSseFrame, yantra };

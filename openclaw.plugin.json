@@ -2,8 +2,8 @@
   "id": "yantrarouter",
   "name": "YantraRouter",
   "description": "Yantra AI Model Router",
-  "version": "1.0.0",
-  "entry": "dist/index.js",
+  "version": "1.0.9",
+  "entry": "dist/index.cjs",
   "providers": ["yantrarouter"],
   "modelSupport": {
     "modelPrefixes": ["yantra/"]
@@ -31,6 +31,11 @@
   ],
   "configSchema": {
     "type": "object",
-    "additionalProperties": false
+    "additionalProperties": false,
+    "properties": {
+      "yantraApiKey": {
+        "type": "string"
+      }
+    }
   }
 }
