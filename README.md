@@ -1,6 +1,8 @@
 # @yantra/openclaw-yantrarouter
 
-OpenClaw plugin for the **Yantra AI Model Router** — routes AI requests to GPT-4.1, Claude Sonnet 4, DeepSeek R1 and more through the Yantra cdecli agent.
+OpenClaw plugin for **Yantra AI** — connects directly to the cdecli agent for intelligent automation across 960+ integrations.
+
+> ✅ No proxy required — works out of the box with OpenClaw CLI and TUI.
 
 ## Install
 

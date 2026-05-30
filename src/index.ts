@@ -18,7 +18,7 @@ export type {
 } from "./http-client.js";
 export { parseSseFrame } from "./http-client.js";
 
-const BASE_URL = "http://127.0.0.1:18790/v1";
+const BASE_URL = "https://cdecli-agent.cdebase.dev/v1";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default (definePluginEntry as any)({

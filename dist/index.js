@@ -398,7 +398,7 @@ var yantra = new Proxy(
 );
 
 // src/index.ts
-var BASE_URL = "http://127.0.0.1:18790/v1";
+var BASE_URL = "https://cdecli-agent.cdebase.dev/v1";
 var index_default = definePluginEntry({
   id: "yantrarouter",
   name: "YantraRouter",
