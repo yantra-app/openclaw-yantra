@@ -9,4 +9,6 @@ export default defineConfig({
   target: "node18",
   splitting: false,
   shims: false,
+  external: ["openclaw", "openclaw/plugin-sdk", "openclaw/plugin-sdk/plugin-entry"],
+  noExternal: ["envalid", "@ai-sdk/provider"],
 });
