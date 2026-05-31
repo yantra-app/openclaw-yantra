@@ -1,12 +1,12 @@
 {
   "id": "yantrarouter",
   "name": "YantraRouter",
-  "description": "Yantra AI Model Router",
-  "version": "1.0.9",
+  "description": "Connect OpenClaw to the cdecli agent",
+  "version": "1.1.2",
   "entry": "dist/index.cjs",
   "providers": ["yantrarouter"],
   "modelSupport": {
-    "modelPrefixes": ["yantra/"]
+    "modelPrefixes": ["yantrarouter/"]
   },
   "setup": {
     "providers": [
@@ -23,7 +23,7 @@
       "choiceId": "yantrarouter-api-key",
       "choiceLabel": "Yantra API Key",
       "groupId": "yantrarouter",
-      "groupLabel": "Yantra Router",
+      "groupLabel": "Yantra (cdecli agent)",
       "cliFlag": "--yantra-api-key",
       "cliOption": "--yantra-api-key <key>",
       "cliDescription": "Yantra API key"

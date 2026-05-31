@@ -20,19 +20,17 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/index.ts
 var index_exports = {};
 __export(index_exports, {
+  CDELI_AGENT_API: () => CDELI_AGENT_API,
   YantraHttpClient: () => YantraHttpClient,
   YantraLanguageModel: () => YantraLanguageModel,
+  createCdecliAgentStreamFn: () => createCdecliAgentStreamFn,
   createYantra: () => createYantra,
   default: () => index_default,
-  loadYantraEnvConfig: () => loadYantraEnvConfig,
   parseSseFrame: () => parseSseFrame,
   yantra: () => yantra
 });
 module.exports = __toCommonJS(index_exports);
 var import_plugin_entry = require("openclaw/plugin-sdk/plugin-entry");
-
-// src/provider.ts
-var import_provider = require("@ai-sdk/provider");
 
 // src/config/env-config.ts
 var import_envalid = require("envalid");
@@ -42,6 +40,9 @@ function loadYantraEnvConfig(env = process.env) {
     YANTRA_API_KEY: (0, import_envalid.str)({ default: "" })
   });
 }
+
+// src/openclaw-cdecli-stream.ts
+var import_pi_ai = require("@earendil-works/pi-ai");
 
 // src/http-client.ts
 function buildHeaders(token) {
@@ -186,14 +187,126 @@ function linkSignals(a, b) {
   return ctrl.signal;
 }
 
-// src/language-model.ts
+// src/openclaw-cdecli-stream.ts
+var CDELI_AGENT_API = "yantra-cdecli-agent";
+var sessionByOpenClaw = /* @__PURE__ */ new Map();
 var EMPTY_USAGE = {
+  input: 0,
+  output: 0,
+  cacheRead: 0,
+  cacheWrite: 0,
+  totalTokens: 0,
+  cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }
+};
+function resolveAgentBaseUrl() {
+  return loadYantraEnvConfig().YANTRA_BASE_URL.replace(/\/+$/, "");
+}
+function resolveAuthToken(options) {
+  const env = loadYantraEnvConfig();
+  const fromOptions = options?.apiKey?.trim();
+  return fromOptions || env.YANTRA_API_KEY || void 0;
+}
+function textFromUserContent(content) {
+  if (typeof content === "string") return content;
+  return content.filter((part) => part.type === "text").map((part) => part.text ?? "").join("");
+}
+function extractLatestUserMessage(messages) {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (msg?.role === "user") {
+      const text = textFromUserContent(msg.content).trim();
+      if (text) return text;
+    }
+  }
+  throw new Error("yantrarouter: no user message in context");
+}
+function sessionKey(options) {
+  return options?.sessionId?.trim() || "default";
+}
+function createCdecliAgentStreamFn() {
+  return (model, context, options) => {
+    const stream = (0, import_pi_ai.createAssistantMessageEventStream)();
+    const output = {
+      role: "assistant",
+      content: [],
+      api: model.api,
+      provider: model.provider,
+      model: model.id,
+      usage: { ...EMPTY_USAGE },
+      stopReason: "stop",
+      timestamp: Date.now()
+    };
+    void (async () => {
+      try {
+        const client = new YantraHttpClient({
+          baseUrl: resolveAgentBaseUrl(),
+          authToken: resolveAuthToken(options)
+        });
+        const key = sessionKey(options);
+        let cdecliSession = sessionByOpenClaw.get(key);
+        if (!cdecliSession) {
+          const info = await client.createSession(
+            { systemPrompt: context.systemPrompt },
+            options?.signal
+          );
+          cdecliSession = info.session_id;
+          sessionByOpenClaw.set(key, cdecliSession);
+        }
+        const message = extractLatestUserMessage(context.messages);
+        stream.push({ type: "start", partial: output });
+        const textBlock = { type: "text", text: "" };
+        output.content.push(textBlock);
+        stream.push({ type: "text_start", contentIndex: 0, partial: output });
+        for await (const ev of client.chatStream(
+          { session_id: cdecliSession, message, stream: true },
+          options?.signal
+        )) {
+          if (ev.event === "delta" || ev.event === "output") {
+            const delta = ev.data.text;
+            if (delta) {
+              textBlock.text += delta;
+              stream.push({
+                type: "text_delta",
+                contentIndex: 0,
+                delta,
+                partial: output
+              });
+            }
+          } else if (ev.event === "error") {
+            output.stopReason = "error";
+            output.errorMessage = ev.data.error || "yantra stream error";
+            stream.push({ type: "error", reason: "error", error: { ...output } });
+            return;
+          }
+        }
+        stream.push({
+          type: "text_end",
+          contentIndex: 0,
+          content: textBlock.text,
+          partial: output
+        });
+        stream.push({ type: "done", reason: "stop", message: { ...output } });
+      } catch (err) {
+        output.stopReason = "error";
+        output.errorMessage = err instanceof Error ? err.message : String(err);
+        stream.push({ type: "error", reason: "error", error: { ...output } });
+      }
+    })();
+    return stream;
+  };
+}
+
+// src/provider.ts
+var import_provider = require("@ai-sdk/provider");
+
+// src/language-model.ts
+var EMPTY_USAGE2 = {
   inputTokens: { total: void 0, noCache: void 0, cacheRead: void 0, cacheWrite: void 0 },
   outputTokens: { total: void 0, text: void 0, reasoning: void 0 }
 };
 var STOP = { unified: "stop", raw: void 0 };
 var ERRORED = { unified: "error", raw: void 0 };
-function extractLatestUserMessage(prompt) {
+function extractLatestUserMessage2(prompt) {
   const warnings = [];
   const systemParts = [];
   let lastUserText;
@@ -275,7 +388,7 @@ var YantraLanguageModel = class {
   }
   async doGenerate(options) {
     const warnings = this.collectWarnings(options);
-    const { message, systemPrompt, warnings: convWarnings } = extractLatestUserMessage(options.prompt);
+    const { message, systemPrompt, warnings: convWarnings } = extractLatestUserMessage2(options.prompt);
     for (const w of convWarnings) warnings.push({ type: "other", message: w });
     const sessionId = await this.ensureSession(systemPrompt);
     const requestBody = {
@@ -294,7 +407,7 @@ var YantraLanguageModel = class {
     return {
       content: [{ type: "text", text: resp.response }],
       finishReason: STOP,
-      usage: EMPTY_USAGE,
+      usage: EMPTY_USAGE2,
       warnings,
       request: { body: requestBody },
       response: { id: resp.session_id, modelId: this.modelId },
@@ -303,7 +416,7 @@ var YantraLanguageModel = class {
   }
   async doStream(options) {
     const warnings = this.collectWarnings(options);
-    const { message, systemPrompt, warnings: convWarnings } = extractLatestUserMessage(options.prompt);
+    const { message, systemPrompt, warnings: convWarnings } = extractLatestUserMessage2(options.prompt);
     for (const w of convWarnings) warnings.push({ type: "other", message: w });
     const sessionId = await this.ensureSession(systemPrompt);
     const requestBody = {
@@ -353,7 +466,7 @@ var YantraLanguageModel = class {
           controller.enqueue({ type: "error", error: err });
         } finally {
           controller.enqueue({ type: "text-end", id: textBlockId });
-          controller.enqueue({ type: "finish", finishReason, usage: EMPTY_USAGE });
+          controller.enqueue({ type: "finish", finishReason, usage: EMPTY_USAGE2 });
           controller.close();
         }
       }
@@ -373,7 +486,7 @@ function resolveBaseUrl(explicit) {
   }
   return url.replace(/\/+$/, "");
 }
-function resolveAuthToken(explicit) {
+function resolveAuthToken2(explicit) {
   if (explicit) return explicit;
   const env = loadYantraEnvConfig();
   return env.YANTRA_API_KEY || void 0;
@@ -381,7 +494,7 @@ function resolveAuthToken(explicit) {
 function createYantra(options = {}) {
   const client = new YantraHttpClient({
     baseUrl: resolveBaseUrl(options.baseUrl),
-    authToken: resolveAuthToken(options.authToken),
+    authToken: resolveAuthToken2(options.authToken),
     fetch: options.fetch,
     timeoutMs: options.timeoutMs
   });
@@ -428,16 +541,30 @@ var yantra = new Proxy(
 );
 
 // src/index.ts
-var BASE_URL = "https://cdecli-agent.cdebase.dev/v1";
+function cdecliAgentBaseUrl() {
+  return loadYantraEnvConfig().YANTRA_BASE_URL.replace(/\/+$/, "");
+}
+var CDELI_MODEL = {
+  id: "yantra",
+  name: "cdecli agent",
+  provider: "yantrarouter",
+  api: CDELI_AGENT_API,
+  baseUrl: cdecliAgentBaseUrl(),
+  reasoning: false,
+  input: ["text"],
+  contextWindow: 128e3,
+  maxTokens: 8192,
+  cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+};
 var index_default = (0, import_plugin_entry.definePluginEntry)({
   id: "yantrarouter",
   name: "YantraRouter",
-  description: "Yantra AI Model Router",
+  description: "Connect OpenClaw to the cdecli agent",
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   register(api) {
     api.registerProvider({
       id: "yantrarouter",
-      label: "Yantra Router",
+      label: "Yantra (cdecli agent)",
       envVars: ["YANTRA_API_KEY"],
       auth: [
         {
@@ -452,44 +579,18 @@ var index_default = (0, import_plugin_entry.definePluginEntry)({
           defaultModel: "yantrarouter/yantra"
         }
       ],
-      // Accept any model string — cdecli agent handles routing internally
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      resolveDynamicModel: (ctx) => ({
-        id: ctx.modelId,
-        name: ctx.modelId,
-        provider: "yantrarouter",
-        api: "openai-completions",
-        baseUrl: BASE_URL,
-        reasoning: false,
-        input: ["text"],
-        contextWindow: 128e3,
-        maxTokens: 8192,
-        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
-      }),
-      // Normalize array content → string (cdecli-agent only accepts string content)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      wrapStreamFn: (ctx) => {
-        const inner = ctx?.streamFn;
-        if (!inner) return void 0;
-        return (params) => {
-          if (params && Array.isArray(params.messages)) {
-            params.messages = params.messages.map((m) => ({
-              ...m,
-              content: Array.isArray(m.content) ? m.content.map((p) => typeof p === "string" ? p : p?.text ?? "").join("") : m.content
-            }));
-          }
-          return inner(params);
-        };
-      }
+      resolveDynamicModel: () => ({ ...CDELI_MODEL, baseUrl: cdecliAgentBaseUrl() }),
+      createStreamFn: () => createCdecliAgentStreamFn()
     });
   }
 });
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  CDELI_AGENT_API,
   YantraHttpClient,
   YantraLanguageModel,
+  createCdecliAgentStreamFn,
   createYantra,
-  loadYantraEnvConfig,
   parseSseFrame,
   yantra
 });

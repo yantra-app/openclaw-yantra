@@ -1,4 +1,6 @@
 import { LanguageModelV3, LanguageModelV3CallOptions, LanguageModelV3Content, LanguageModelV3FinishReason, LanguageModelV3Usage, SharedV3Warning, SharedV3ProviderMetadata, LanguageModelV3StreamPart } from '@ai-sdk/provider';
+import * as _earendil_works_pi_ai from '@earendil-works/pi-ai';
+import { Context, StreamOptions } from '@earendil-works/pi-ai';
 
 interface YantraHttpClientOptions {
     /** Base URL of the cdecli agent HTTP API, e.g. `https://cdecli-agent.cdebase.dev`. */
@@ -205,8 +207,12 @@ interface YantraEnvConfig {
     YANTRA_BASE_URL: string;
     YANTRA_API_KEY: string;
 }
-declare function loadYantraEnvConfig(env?: NodeJS.ProcessEnv): YantraEnvConfig;
+
+/** Custom pi-ai API id — stream goes to cdecli /v1/agent/chat, not OpenAI completions. */
+declare const CDELI_AGENT_API = "yantra-cdecli-agent";
+/** OpenClaw StreamFn — every turn hits cdecli-agent /v1/agent/chat directly. */
+declare function createCdecliAgentStreamFn(): (model: any, context: Context, options?: StreamOptions) => _earendil_works_pi_ai.AssistantMessageEventStream;
 
 declare const _default: any;
 
-export { type ChatRequest, type ChatResponse, type CreateSessionInput, type SessionInfo, type YantraEnvConfig, YantraHttpClient, type YantraHttpClientOptions, YantraLanguageModel, type YantraLanguageModelOptions, type YantraModelSettings, type YantraProvider, type YantraProviderSettings, type YantraStreamEvent, createYantra, _default as default, loadYantraEnvConfig, parseSseFrame, yantra };
+export { CDELI_AGENT_API, type ChatRequest, type ChatResponse, type CreateSessionInput, type SessionInfo, type YantraEnvConfig, YantraHttpClient, type YantraHttpClientOptions, YantraLanguageModel, type YantraLanguageModelOptions, type YantraModelSettings, type YantraProvider, type YantraProviderSettings, type YantraStreamEvent, createCdecliAgentStreamFn, createYantra, _default as default, parseSseFrame, yantra };
