@@ -1,10 +1,44 @@
-import { createAssistantMessageEventStream } from "@earendil-works/pi-ai";
-import type { AssistantMessage, Context, Message, StreamOptions } from "@earendil-works/pi-ai";
 import { loadYantraEnvConfig } from "./config/env-config.js";
 import { YantraHttpClient } from "./http-client.js";
+import { createAssistantMessageEventStream } from "./pi-event-stream.js";
 
 /** Custom pi-ai API id — stream goes to cdecli /v1/agent/chat, not OpenAI completions. */
 export const CDELI_AGENT_API = "yantra-cdecli-agent";
+
+interface OpenClawMessage {
+  role: string;
+  content: string | Array<{ type: string; text?: string }>;
+}
+
+interface OpenClawContext {
+  systemPrompt?: string;
+  messages: OpenClawMessage[];
+}
+
+interface OpenClawStreamOptions {
+  apiKey?: string;
+  sessionId?: string;
+  signal?: AbortSignal;
+}
+
+interface AssistantMessage {
+  role: "assistant";
+  content: Array<{ type: "text"; text: string }>;
+  api: string;
+  provider: string;
+  model: string;
+  usage: {
+    input: number;
+    output: number;
+    cacheRead: number;
+    cacheWrite: number;
+    totalTokens: number;
+    cost: { input: number; output: number; cacheRead: number; cacheWrite: number; total: number };
+  };
+  stopReason: "stop" | "error";
+  errorMessage?: string;
+  timestamp: number;
+}
 
 const sessionByOpenClaw = new Map<string, string>();
 
@@ -21,7 +55,7 @@ function resolveAgentBaseUrl(): string {
   return loadYantraEnvConfig().YANTRA_BASE_URL.replace(/\/+$/, "");
 }
 
-function resolveAuthToken(options?: StreamOptions): string | undefined {
+function resolveAuthToken(options?: OpenClawStreamOptions): string | undefined {
   const env = loadYantraEnvConfig();
   const fromOptions = options?.apiKey?.trim();
   return fromOptions || env.YANTRA_API_KEY || undefined;
@@ -36,7 +70,7 @@ function textFromUserContent(content: string | Array<{ type: string; text?: stri
 }
 
 /** Latest user turn text for cdecli-agent (session holds prior context server-side). */
-export function extractLatestUserMessage(messages: Message[]): string {
+export function extractLatestUserMessage(messages: OpenClawMessage[]): string {
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];
     if (msg?.role === "user") {
@@ -47,7 +81,7 @@ export function extractLatestUserMessage(messages: Message[]): string {
   throw new Error("yantrarouter: no user message in context");
 }
 
-function sessionKey(options?: StreamOptions): string {
+function sessionKey(options?: OpenClawStreamOptions): string {
   return options?.sessionId?.trim() || "default";
 }
 
@@ -56,8 +90,8 @@ export function createCdecliAgentStreamFn() {
   return (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     model: any,
-    context: Context,
-    options?: StreamOptions,
+    context: OpenClawContext,
+    options?: OpenClawStreamOptions,
   ) => {
     const stream = createAssistantMessageEventStream();
     const output: AssistantMessage = {

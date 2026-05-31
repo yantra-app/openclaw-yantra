@@ -1,6 +1,4 @@
 import { LanguageModelV3, LanguageModelV3CallOptions, LanguageModelV3Content, LanguageModelV3FinishReason, LanguageModelV3Usage, SharedV3Warning, SharedV3ProviderMetadata, LanguageModelV3StreamPart } from '@ai-sdk/provider';
-import * as _earendil_works_pi_ai from '@earendil-works/pi-ai';
-import { Context, StreamOptions } from '@earendil-works/pi-ai';
 
 interface YantraHttpClientOptions {
     /** Base URL of the cdecli agent HTTP API, e.g. `https://cdecli-agent.cdebase.dev`. */
@@ -208,10 +206,46 @@ interface YantraEnvConfig {
     YANTRA_API_KEY: string;
 }
 
+/** Minimal OpenClaw/pi-ai-compatible event stream (no @earendil-works/pi-ai dependency). */
+declare class EventStream<T, R = T> implements AsyncIterable<T> {
+    private readonly isComplete;
+    private readonly extractResult;
+    private queue;
+    private waiting;
+    private done;
+    private finalResultPromise;
+    private resolveFinalResult;
+    constructor(isComplete: (event: T) => boolean, extractResult: (event: T) => R);
+    push(event: T): void;
+    end(result?: R): void;
+    [Symbol.asyncIterator](): AsyncIterator<T>;
+    result(): Promise<R>;
+}
+type AssistantMessageEvent = any;
+declare class AssistantMessageEventStream extends EventStream<AssistantMessageEvent, any> {
+    constructor();
+}
+
 /** Custom pi-ai API id — stream goes to cdecli /v1/agent/chat, not OpenAI completions. */
 declare const CDELI_AGENT_API = "yantra-cdecli-agent";
+interface OpenClawMessage {
+    role: string;
+    content: string | Array<{
+        type: string;
+        text?: string;
+    }>;
+}
+interface OpenClawContext {
+    systemPrompt?: string;
+    messages: OpenClawMessage[];
+}
+interface OpenClawStreamOptions {
+    apiKey?: string;
+    sessionId?: string;
+    signal?: AbortSignal;
+}
 /** OpenClaw StreamFn — every turn hits cdecli-agent /v1/agent/chat directly. */
-declare function createCdecliAgentStreamFn(): (model: any, context: Context, options?: StreamOptions) => _earendil_works_pi_ai.AssistantMessageEventStream;
+declare function createCdecliAgentStreamFn(): (model: any, context: OpenClawContext, options?: OpenClawStreamOptions) => AssistantMessageEventStream;
 
 declare const _default: any;
 
