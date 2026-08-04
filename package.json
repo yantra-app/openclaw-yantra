@@ -34,7 +34,10 @@
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run clean && npm run build"
   },
-  "dependencies": {},
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "node-fetch": "^3.3.2"
+  },
   "devDependencies": {
     "@ai-sdk/provider": "^3.0.8",
     "@ai-sdk/provider-utils": "^4.0.15",
