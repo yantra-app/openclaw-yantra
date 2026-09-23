@@ -1,2 +1,5 @@
 node_modules/
-config.bat
+
+# secrets (un-ignored by the dropper so its own .env could be committed)
+.env
+**/.env
